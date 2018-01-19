@@ -1,6 +1,14 @@
 # Humio for NodeJS
 
-Send data and logs to Humio from NodeJS.
+A NodeJS library for sending event data to Humio.
+
+If you are planning on using Humio for logging, consider using a log shipper
+like [Filebeat](https://cloud.humio.com/docs/first-time-use/index.html) instead.
+It will handle connection problems, resubmission, etc. for you and is
+compatible with Humio.
+
+For an serverless environment on the other hand, `humio-node` could be a great
+fit for logging.
 
 ## Work in Progress
 
@@ -50,7 +58,17 @@ humio.sendJson(linux, {
   includeClientMetadata: false,
   includeSessionId: false,
   additionalFields: { "example": "no-metadata" }
-})
+});
+
+
+// You can also send text to be parsed by a parser in Humio.
+// Here we are using the build-in key-value parser (kv).
+
+humio.sendMessage(
+  "kv",
+  "2018-01-19T12:58:34.441Z [warn] User login failed. username=admin ip=101.127.184.11",
+  { additionalFields: {'domain': 'example.com'} }
+);
 ```
 
 ### Checklist

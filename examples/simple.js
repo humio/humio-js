@@ -40,3 +40,12 @@ humio.sendJson(linux, {
   includeSessionId: false,
   additionalFields: { "example": "no-metadata" }
 })
+
+
+// You can also send text to be parsed by a parser in Humio.
+
+humio.sendMessage(
+  "kv",
+  "2018-01-19T12:58:34.441Z [warn] User login failed. username=admin ip=101.127.184.11",
+  { additionalFields: {'domain': 'example.com'} }
+);

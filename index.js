@@ -91,7 +91,7 @@ Humio.prototype.sendJson = function sendJson(json, options) {
 };
 
 Humio.prototype.sendMessage = function send(parserId, message, additionalFields) {
-    fields = additionalFields || {};
+    var fields = additionalFields || {};
 
     // Don't modify the input object directly.
     // Make a copy we can mess with.
@@ -102,7 +102,7 @@ Humio.prototype.sendMessage = function send(parserId, message, additionalFields)
 
     for (var f in fields) {
       if (typeof fields[f] !== "string") {
-        sentFields[f] = Json.stringify(fields[f]);
+        sentFields[f] = JSON.stringify(fields[f]);
       }
     }
 
@@ -118,6 +118,7 @@ Humio.prototype.sendMessage = function send(parserId, message, additionalFields)
       }
     ];
 
+
     const requestOptions = {
       host: this.options.host,
       port: this.options.port,
@@ -129,10 +130,15 @@ Humio.prototype.sendMessage = function send(parserId, message, additionalFields)
       }
     };
 
-    const request = https.request(requestOptions);
+    const request = https.request(requestOptions, (res) => {
+      // TODO: Let sendMessage take a callback where you can report error.
+      if (res.statusCode >= 400) {
+        console.error(res.statusCode, res.statusMessage);
+      }
+    });
 
     request.on('error', (e) => {
-      // TODO: Let send take a callback where you can report error.
+      // TODO: Let sendMessage take a callback where you can report error.
       console.error(e);
     });
 

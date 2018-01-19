@@ -1,6 +1,6 @@
 {
   "name": "humio",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Log to Humio from NodeJS.",
   "main": "index.js",
   "repository": "https://github.com/humio/humio-node.git",

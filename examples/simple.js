@@ -1,14 +1,3 @@
-# Humio for NodeJS
-
-Send data and logs to Humio from NodeJS.
-
-## Work in Progress
-
-This library is work in progress. You should not use it for production systems.
-
-## Usage
-
-```javascript
 const Humio = require("../index.js"); // require("humio")
 
 const humio = new Humio({
@@ -51,15 +40,3 @@ humio.sendJson(linux, {
   includeSessionId: false,
   additionalFields: { "example": "no-metadata" }
 })
-```
-
-### Checklist
-
-- [ ] Buffered Sending (don't send messages one at a time)
-- [ ] Error handling
-- [ ] Resubmission and back-off
-
-## Contribute
-
-Please Contribute if you see something missing or find a bug,
-PR's are always welcome.

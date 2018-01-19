@@ -18,7 +18,8 @@ const Humio = function Humio(options) {
   this.options.sessionId = this.options.sessionId || crypto.randomBytes(40).toString('hex');
 }
 
-Humio.prototype.version = require('./package.json').version;
+const CLIENT_VERSION = require('./package.json').version;
+const CLIENT_ID = "humio-node"
 
 Humio.prototype.sendJson = function sendJson(json) {
   this.send("json", JSON.stringify(json));
@@ -38,8 +39,8 @@ Humio.prototype.send = function send(parserId, message, fields, ch) {
     }
 
     sentFields["@session"] = sentFields["@session"] || this.options.sessionId;
-    sentFields["@client"] = sentFields["@client"] || "humio-node";
-    sentFields["@clientVersion"] = sentFields["@clientVersion"] || this.version;
+    sentFields["@client"] = CLIENT_ID;
+    sentFields["@clientVersion"] = CLIENT_VERSION;
 
     const requestBody = [
       {

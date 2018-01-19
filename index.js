@@ -18,7 +18,7 @@ const Humio = function Humio(options) {
   this.options.sessionId = this.options.sessionId || crypto.randomBytes(40).toString('hex');
 }
 
-Humio.prototype.version = process.env.npm_package_version;
+Humio.prototype.version = require('./package.json').version;
 
 Humio.prototype.sendJson = function sendJson(json) {
   this.send("json", JSON.stringify(json));

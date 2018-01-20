@@ -73,9 +73,11 @@ humio.sendMessage(
 
 ### Checklist
 
+- [ ] Feature: Search Humio
 - [ ] Buffered Sending (don't send messages one at a time)
-- [ ] Error handling
+- [ ] Error handling, callback function (or Promise)
 - [ ] Resubmission and back-off
+- [ ] Feature: Search Streaming
 
 ## Contribute
 

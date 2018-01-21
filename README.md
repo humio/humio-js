@@ -35,7 +35,7 @@ support for streaming and Live Queries soon.
 
 Let us count the number of new users in our system in the past 10 minutes.
 
-```
+```javascript
 let count = null;
 
 client.run({ queryString: '"User Created" | count()', start: "10m" })

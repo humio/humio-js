@@ -18,6 +18,8 @@ const Humio = function Humio(options) {
   this.options.sessionId = this.options.sessionId || crypto.randomBytes(40).toString('hex');
   this.options.includeClientMetadata = this.options.includeClientMetadata || true;
   this.options.includeSessionId = this.options.includeSessionId || true;
+  this.options.additionalFields = this.options.additionalFields || {};
+
 };
 
 const CLIENT_VERSION = require('./package.json').version;
@@ -45,9 +47,11 @@ Humio.prototype.sendJson = function(json, options) {
 
   options = Object.assign({}, defaultOptions, options);
 
+  const additionalFields = Object.assign({}, this.options.additionalFields, options.additionalFields);
+
   // Don't modify the input object directly.
   // Make a copy we can mess with.
-  const sentFields = Object.assign({}, json);
+  const sentFields = Object.assign({}, json, additionalFields);
 
   this.addMetadata(sentFields);
 
@@ -91,27 +95,23 @@ Humio.prototype.sendJson = function(json, options) {
 };
 
 Humio.prototype.sendMessage = function(parserId, message, additionalFields) {
-    var fields = additionalFields || {};
-
-    // Don't modify the input object directly.
-    // Make a copy we can mess with.
-    const sentFields = Object.assign({}, fields);
+    const fields = Object.assign({}, this.options.additionalFields, additionalFields);
 
     // Only strings are allowed.
     // TODO: Can we use nested attributes here?
 
     for (var f in fields) {
       if (typeof fields[f] !== "string") {
-        sentFields[f] = JSON.stringify(fields[f]);
+        fields[f] = JSON.stringify(fields[f]);
       }
     }
 
-    this.addMetadata(sentFields);
+    this.addMetadata(fields);
 
     const requestBody = [
       {
         "type": parserId,
-        "fields": sentFields,
+        "fields": fields,
         "messages": [
           message
         ]

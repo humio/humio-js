@@ -16,6 +16,8 @@ This library is work in progress. You should not use it for production systems.
 
 ## Usage
 
+Start by creating a Humio client:
+
 ```javascript
 const Humio = require("../index.js"); // require("humio")
 
@@ -24,6 +26,42 @@ const humio = new Humio({
   host: process.env.HUMIO_HOST || "cloud.humio.com",
   dataspaceId: "example"
 });
+```
+
+### Searching Humio
+
+NOTE: This library only supports standard (static) queries, we plan on adding
+support for streaming and Live Queries soon.
+
+Let us count the number of new users in our system in the past 10 minutes.
+
+```
+let count = null;
+
+client.run({ queryString: '"User Created" | count()', start: "10m" })
+  .then((result) => {
+    if (result.status === "success") {
+      count = parseInt(result.data[0]._count);
+    } else {
+      console.error("Search Error", result.error);
+    }
+  }).catch(console.error);
+```
+
+You should always check `status` on `result`. Humio will not report query errors
+in the catch clause, because the the operation was a success but your input was
+likely not correct. The error reason is stored in `result.error`.
+
+If the request fails do so a connection error or similar it will be reported in
+`catch`.
+
+Notice that even though `_count` is a number we have to parse it using
+`parserInt`. That is because in Humio everything is just a string, and is
+returned as a string.
+
+### Sending Data To Humio
+
+```javascript
 
 // Sending Structured Data (JSON)
 
@@ -74,7 +112,8 @@ humio.sendMessage(
 
 ### Checklist
 
-- [ ] Feature: Search Humio
+- [ ] Streaming Results
+- [ ] Live Queries
 - [ ] Buffered Sending (don't send messages one at a time)
 - [ ] Error handling, callback function (or Promise)
 - [ ] Resubmission and back-off

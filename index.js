@@ -7,8 +7,8 @@ const defaultPort = 443;
 const defaultDataspaceId = "sandbox";
 
 const Humio = function Humio(options) {
-  if (!options.ingestToken) {
-    throw new Error("Humio ingestToken must be specified in the options.")
+  if (!options.apiToken) {
+    throw new Error("Humio apiToken must be specified in the options.")
   }
 
   this.options = Object.assign({}, options);
@@ -18,20 +18,14 @@ const Humio = function Humio(options) {
   this.options.sessionId = this.options.sessionId || crypto.randomBytes(40).toString('hex');
   this.options.includeClientMetadata = this.options.includeClientMetadata || true;
   this.options.includeSessionId = this.options.includeSessionId || true;
-}
+};
 
 const CLIENT_VERSION = require('./package.json').version;
 const CLIENT_ID = "humio-node";
 
 Humio.prototype.version = CLIENT_VERSION;
 
-const defaultOptions = {
-  additionalFields: {},
-  tags: {},
-  timestamp: null,
-}
-
-Humio.prototype.addMetadata = function addMetadata(fields) {
+Humio.prototype.addMetadata = function(fields) {
   if (this.options.includeSessionId) {
     fields["@session"] = fields["@session"] || this.options.sessionId;
   }
@@ -42,7 +36,13 @@ Humio.prototype.addMetadata = function addMetadata(fields) {
   }
 }
 
-Humio.prototype.sendJson = function sendJson(json, options) {
+Humio.prototype.sendJson = function(json, options) {
+  const defaultOptions = {
+    additionalFields: {},
+    tags: {},
+    timestamp: null,
+  };
+
   options = Object.assign({}, defaultOptions, options);
 
   // Don't modify the input object directly.
@@ -70,7 +70,7 @@ Humio.prototype.sendJson = function sendJson(json, options) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + this.options.ingestToken
+      'Authorization': 'Bearer ' + this.options.apiToken
     }
   };
 
@@ -90,7 +90,7 @@ Humio.prototype.sendJson = function sendJson(json, options) {
   request.end();
 };
 
-Humio.prototype.sendMessage = function send(parserId, message, additionalFields) {
+Humio.prototype.sendMessage = function(parserId, message, additionalFields) {
     var fields = additionalFields || {};
 
     // Don't modify the input object directly.
@@ -118,7 +118,6 @@ Humio.prototype.sendMessage = function send(parserId, message, additionalFields)
       }
     ];
 
-
     const requestOptions = {
       host: this.options.host,
       port: this.options.port,
@@ -126,7 +125,7 @@ Humio.prototype.sendMessage = function send(parserId, message, additionalFields)
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + this.options.ingestToken
+        'Authorization': 'Bearer ' + this.options.apiToken
       }
     };
 
@@ -144,6 +143,74 @@ Humio.prototype.sendMessage = function send(parserId, message, additionalFields)
 
     request.write(JSON.stringify(requestBody));
     request.end();
+};
+
+Humio.prototype.run = function(options) {
+  const defaultOptions = {
+    queryString: "",
+    start: null,
+    end: "now",
+    isLive: false
+  };
+
+  options = Object.assign({}, defaultOptions, options);
+  // TODO: Mention need to use API Token in docs/README
+
+  const requestBody = options;
+
+  const requestOptions = {
+    host: this.options.host,
+    port: this.options.port,
+    path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/query",
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + this.options.apiToken,
+      'Accept': 'application/json',
+      'Connection': 'keep-alive'
+    }
+  };
+
+  return new Promise((resolve, reject) => {
+    const request = https.request(requestOptions, (res) => {
+
+      let chunks = [];
+
+      res.on("data", (chunk) => {
+        chunks.push(chunk.toString());
+      });
+
+      res.on("end", () => {
+        const status = res.statusCode >= 400 ? "error" : "success";
+        const body = chunks.join("");
+        const result = {
+          status: status,
+          statusCode: res.statusCode,
+          error: null,
+          data: null
+        };
+
+        if (res.statusCode < 400) {
+          try {
+            result.data = JSON.parse(body);
+          } catch (e) {
+            // If the Json failed to parse.
+            reject(e);
+            return;
+          }
+        } else {
+          result.error = body;
+        }
+
+        resolve(result);
+      });
+    });
+
+    request.on('error', reject);
+
+    request.write(JSON.stringify(requestBody));
+    request.end();
+  });
 };
 
 module.exports = Humio;

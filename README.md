@@ -20,8 +20,9 @@ This library is work in progress. You should not use it for production systems.
 const Humio = require("../index.js"); // require("humio")
 
 const humio = new Humio({
-  ingestToken: process.env.HUMIO_INGEST_TOKEN,
-  host: process.env.HUMIO_HOST || "cloud.humio.com"
+  apiToken: process.env.HUMIO_API_TOKEN,
+  host: process.env.HUMIO_HOST || "cloud.humio.com",
+  dataspaceId: "example"
 });
 
 // Sending Structured Data (JSON)

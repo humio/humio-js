@@ -2,8 +2,8 @@ var Humio = require("../index.js");
 
 var client = new Humio({
   apiToken: process.env.HUMIO_API_TOKEN,
-  host: "cloud.humio.com",
-  dataspaceId: 'humio'
+  host: process.env.HUMIO_HOST || "cloud.humio.com",
+  dataspaceId: process.env.HUMIO_DATASPACE_ID || "sandbox"
 });
 
 // Stream all event that contains the field `loglevel` that matches

@@ -3,6 +3,7 @@ const Humio = require("../index.js"); // require("humio")
 const humio = new Humio({
   apiToken: process.env.HUMIO_API_TOKEN,
   host: process.env.HUMIO_HOST || "cloud.humio.com",
+  dataspaceId: process.env.HUMIO_DATASPACE_ID || "sandbox"
 });
 
 // Sending Structured Data (JSON)

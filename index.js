@@ -188,11 +188,9 @@ Humio.prototype.stream = function(options, onMatch) {
     headers: {
       'Authorization': 'Bearer ' + this.options.apiToken,
       'Content-Type': 'application/json',
-      'Accept': 'text/plain'
+      'Accept': 'application/x-ndjson'
     }
   };
-
-  console.log(requestOptions);
 
   return new Promise((resolve, reject) => {
     const request = https.request(requestOptions, (res) => {
@@ -265,10 +263,12 @@ Humio.prototype.run = function(options) {
     }
   };
 
+  console.log(requestOptions)
+
   return doRequest(requestOptions, requestBody)
     .then((res) => {
       if (res.status === 'success') {
-        return poll.call(this, res, options.onPartialResult);
+        return poll.call(this, res.data.id, options.onPartialResult);
       } else {
         return res;
       }
@@ -280,7 +280,7 @@ function poll(jobId, onData = null) {
   const pollRequestOptions = {
     host: this.options.host,
     port: this.options.port,
-    path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/queryjobs/" + urlEncodeComponents(jobId),
+    path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/queryjobs/" + encodeURIComponent(jobId),
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -367,20 +367,58 @@ function doRequest(requestOptions, requestBody = null) {
 // Response Helpers
 ////////////////////////////////////////////////////////////////////////////////
 
-Humio.count = (result) => {
-  let events;
+Humio.count = (result, fieldName = "_count") => {
   if (result.data.events) {
-    events = result.data.events;
+    return result.data.events[0]._count;
   } else {
-    events = result.data;
+    throw new Error("the count function only works for aggregate results")
   }
-
-  events[0]._count;
-}
+};
 
 Humio.progress = (result) => {
   if (result.data.metaData.totalWork === 0) return 1;
   return result.data.metaData.workDone / result.data.metaData.totalWork;
-}
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Printers
+////////////////////////////////////////////////////////////////////////////////
+
+
+Humio.printResult = (result, format) => {
+  format = format.toLowerCase();
+
+  if (format === "groupby") {
+    return printGroupBy(result);
+  } else {
+    throw new Error("Unknown print format. format=" + format);
+  }
+};
+
+function printGroupBy(result) {
+  if (result.data.events.length === 0) return "[ No Results ]";
+
+  const columns = Object.keys(result.data.events[0]);
+  const getColumnWidths = (event) => {
+    return columns.map(column => event[column].length);
+  };
+
+  const keepMaxColumn = (acc, event) => {
+    return getColumnWidths(event).map((width, i) => width >= acc[i] ? width : acc[i]);
+  }
+
+  const initialWidths = columns.map(c => c.length);
+  const columnWidths = result.data.events.reduce(keepMaxColumn, initialWidths);
+
+  const toLine = (event) => columns.reduce((line, column, i) => line + "| " + event[column].padEnd(columnWidths[i]) + " ", "") + "|\n";
+
+  const header = columns.reduce((line, column, i) => line + "| " + column.padEnd(columnWidths[i]) + " ", "") + "|\n";
+  const seperator = '-'.repeat(header.length - 1) + '\n';
+
+  const output = result.data.events.reduce((out, event) => out + toLine(event), seperator + header + seperator) + seperator;
+
+  return output;
+};
 
 module.exports = Humio;

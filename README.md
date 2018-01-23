@@ -1,4 +1,4 @@
-# Humio for NodeJS
+# Humio for NodeJS <a href="https://www.npmjs.com/package/humio"><img src="https://img.shields.io/npm/v/humio.svg" alt="" /></a>
 
 With Humio for NodeJS you can do
 
@@ -15,7 +15,7 @@ This library is work in progress. You should not use it for production systems.
 Start by creating a Humio client:
 
 ```javascript
-const Humio = require("../index.js"); // require("humio")
+const Humio = require("humio"); // require("humio")
 
 const humio = new Humio({
   apiToken: "xyz...",

@@ -1,6 +1,10 @@
 # Humio for NodeJS
 
-A NodeJS library for sending event data to Humio.
+With Humio for NodeJS you can do
+
+- Data Mining & Ad-Hoc Searches
+- Logging
+- Events Collecting
 
 If you are planning on using Humio for logging, consider using a log shipper
 like [Filebeat](https://cloud.humio.com/docs/first-time-use/index.html) instead.
@@ -22,26 +26,24 @@ Start by creating a Humio client:
 const Humio = require("../index.js"); // require("humio")
 
 const humio = new Humio({
-  apiToken: process.env.HUMIO_API_TOKEN,
-  host: process.env.HUMIO_HOST || "cloud.humio.com",
+  apiToken: "xyz...",
+  host: "cloud.humio.com",
   dataspaceId: "example"
 });
 ```
 
 ### Searching Humio
 
-NOTE: This library only supports standard (static) queries, we plan on adding
-support for streaming and Live Queries soon.
-
-Let us count the number of new users in our system in the past 10 minutes.
+This search will count the number of new users in our system in the past 10 minutes.
 
 ```javascript
 let count = null;
 
-client.run({ queryString: '"User Created" | count()', start: "10m" })
+client.run({ queryString: '"User Created" | count()', start: "10m", isLive: true })
   .then((result) => {
     if (result.status === "success") {
       count = parseInt(result.data[0]._count);
+      // Alternatively use the helper function: Humio.count(result)
     } else {
       console.error("Search Error", result.error);
     }
@@ -59,19 +61,24 @@ Notice that even though `_count` is a number we have to parse it using
 `parserInt`. That is because in Humio everything is just a string, and is
 returned as a string.
 
-#### Stream or Aggregate
-
-There are two functions used for querying:
+There are two functions used for querying Humio:
 
 - `stream`
 - `run`
 
-The `stream` function should be used when you have a need to stream results as they
-are found by humio. You should use `stream` for getting very large result sets – since
-they are sent instantly Humio does not need to hold them in memory.
+#### Stream
 
-While you can use `stream` execute aggregate functions like `timechart` or `count`,
-it does not make much sense stream it. That is where `run` fits in.
+The `stream` function should be used when you have a need to stream results as they
+are found by Humio. You should use `stream` for getting very large result sets –
+Humio does not need to buffer then since each event is sent the instant they are found.
+
+While it is possible use `stream()` execute aggregate functions like `timechart` or `count`,
+it does not make much sense stream it those result. That is where `run` fits in.
+
+_In a future version of Humio you might not be able to use `stream` for aggregates,
+so we recommend that you don't._
+
+#### Run
 
 The `run` function is meant primarily for aggregate functions and small filter
 searches with smaller result sets. It will start a search in humio and periodically
@@ -87,9 +94,7 @@ client.run({query: "service=kubernetes | count()", onPartialResult: (result, pro
 }});
 ```
 
-Both is `stream` and `run` return promises, that resolve to the final result.
-
-### Sending Data To Humio
+### Sending Events To Humio
 
 ```javascript
 
@@ -98,7 +103,8 @@ Both is `stream` and `run` return promises, that resolve to the final result.
 const linux = {
   coreTemperature: "92F",
   server: "andromida-2",
-  kernelVersion: "4.14.14"
+  kernelVersion: "4.14.14",
+  eventType: 'CORE_DUMP'
 };
 
 humio.sendJson(linux);
@@ -116,20 +122,6 @@ humio.sendJson(linux, {
   additionalFields: { "example": "custom-timestamp" }
 });
 
-// Humio adds metadata to the events e.i. @client (always "humio-node"),
-// @clientVersion (the current version of humio-node), and @session.
-//
-// @session makes it easy to track events over several messages in Humio.
-// Your system might have this data already and you can exclude @session
-// using
-
-humio.sendJson(linux, {
-  includeClientMetadata: false,
-  includeSessionId: false,
-  additionalFields: { "example": "no-metadata" }
-});
-
-
 // You can also send text to be parsed by a parser in Humio.
 // Here we are using the build-in key-value parser (kv).
 
@@ -139,6 +131,36 @@ humio.sendMessage(
   { additionalFields: {'domain': 'example.com'} }
 );
 ```
+
+## Tips
+
+### Additional Fields
+
+It is also possible to add additional fields at the client level instead of
+passing it to every function call.
+
+```javascript
+const humio = new Humio({ ..., additionalFields: { service: "my-service", domain: "example.com" } });
+```
+
+These fields will be added to each call to `sendJson` and `sendMessage`.
+
+### Metadata
+
+Humio also adds metadata to the events e.i. `@client` (always "humio-node"),
+`@clientVersion` (the current version of humio-node), and `@session`.
+
+`@session` makes it easy to track events over several messages in Humio.
+Your system might have this data already and you can exclude `@session`
+using:
+
+```javascript
+humio.sendJson(linux, {
+  includeClientMetadata: false,
+  includeSessionId: false
+});
+```
+
 
 ### TODO
 

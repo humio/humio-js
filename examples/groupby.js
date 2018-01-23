@@ -6,8 +6,6 @@ var client = new Humio({
   dataspaceId: process.env.HUMIO_DATASPACE_ID || "sandbox",
 });
 
-console.log(client.options.dataspaceId);
-
 // This search counts the number of errors
 // with the word `banana` in the past 10m.
 

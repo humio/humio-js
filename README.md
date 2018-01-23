@@ -73,7 +73,7 @@ so we recommend that you don't._
 #### Run
 
 The `run` function is meant primarily for aggregate functions and small filter
-searches with smaller result sets. It will start a search in humio and periodically
+searches with smaller result sets. It will start a search in Humio and periodically
 return partial results as the search progresses.
 
 E.g. the query `service=kubernetes | count()` will return the number events with
@@ -117,7 +117,7 @@ humio.sendJson(linux, {
 
 ### Sending Unstructured Logs to Humio
 
-Apart from sending json you can also send _normal_ unstructured log lines to humio.
+Apart from sending json you can also send _normal_ unstructured log lines to Humio.
 
 ```javascript
 

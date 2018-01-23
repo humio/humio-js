@@ -9,7 +9,7 @@ var client = new Humio({
 // This search counts the number of errors
 // with the word `banana` in the past 10m.
 
-const queryOptions = {
+var queryOptions = {
   queryString: 'loglevel = /error/i | banana | count()',
   start: "10m",
   onPartialResult: onPartialResult
@@ -18,7 +18,7 @@ const queryOptions = {
 client.run(queryOptions).then(onCompletion).catch(console.error);
 
 function onPartialResult(result, progress) {
-  const percent = "(" + (progress * 100).toFixed(2) + "%)";
+  var percent = "(" + (progress * 100).toFixed(2) + "%)";
   console.log("Partial Result: " + Humio.count(result) + " " + percent);
 }
 

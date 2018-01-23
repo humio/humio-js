@@ -1,15 +1,13 @@
-"use strict";
+var crypto = require("crypto");
+var https = require("https");
 
-const crypto = require("crypto");
-const https = require("https");
+var defaultHost = "cloud.humio.com";
+var defaultPort = 443;
+var defaultDataspaceId = "sandbox";
 
-const defaultHost = "cloud.humio.com";
-const defaultPort = 443;
-const defaultDataspaceId = "sandbox";
-
-const Humio = function Humio(options) {
+var Humio = function Humio(options) {
   if (!options.apiToken) {
-    throw new Error("Humio apiToken must be specified in the options.")
+    throw new Error("Humio apiToken must be specified in the options.");
   }
 
   this.options = Object.assign({}, options);
@@ -23,8 +21,8 @@ const Humio = function Humio(options) {
 
 };
 
-const CLIENT_VERSION = require('./package.json').version;
-const CLIENT_ID = "humio-node";
+var CLIENT_VERSION = require('./package.json').version;
+var CLIENT_ID = "humio-node";
 
 Humio.prototype.version = CLIENT_VERSION;
 
@@ -37,10 +35,10 @@ Humio.prototype.addMetadata = function(fields) {
     fields["@client"] = CLIENT_ID;
     fields["@clientVersion"] = CLIENT_VERSION;
   }
-}
+};
 
 Humio.prototype.sendJson = function(json, options) {
-  const defaultOptions = {
+  var defaultOptions = {
     additionalFields: {},
     tags: {},
     timestamp: null,
@@ -48,15 +46,15 @@ Humio.prototype.sendJson = function(json, options) {
 
   options = Object.assign({}, defaultOptions, options);
 
-  const additionalFields = Object.assign({}, this.options.additionalFields, options.additionalFields);
+  var additionalFields = Object.assign({}, this.options.additionalFields, options.additionalFields);
 
   // Don't modify the input object directly.
   // Make a copy we can mess with.
-  const sentFields = Object.assign({}, json, additionalFields);
+  var sentFields = Object.assign({}, json, additionalFields);
 
   this.addMetadata(sentFields);
 
-  const requestBody = [
+  var requestBody = [
     {
       "tags": {},
       "events": [
@@ -68,7 +66,7 @@ Humio.prototype.sendJson = function(json, options) {
     }
   ];
 
-  const requestOptions = {
+  var requestOptions = {
     host: this.options.host,
     port: this.options.port,
     path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/ingest",
@@ -79,14 +77,14 @@ Humio.prototype.sendJson = function(json, options) {
     }
   };
 
-  const request = https.request(requestOptions, (res) => {
+  var request = https.request(requestOptions, function(res) {
     // TODO: Let sendJson take a callback where you can report error.
     if (res.statusCode >= 400) {
       console.error(res.statusCode, res.statusMessage);
     }
   });
 
-  request.on('error', (e) => {
+  request.on('error', function(e) {
     // TODO: Let sendJson take a callback where you can report error.
     console.error(e);
   });
@@ -96,7 +94,7 @@ Humio.prototype.sendJson = function(json, options) {
 };
 
 Humio.prototype.sendMessage = function(parserId, message, additionalFields) {
-    const fields = Object.assign({}, this.options.additionalFields, additionalFields);
+    var fields = Object.assign({}, this.options.additionalFields, additionalFields);
 
     // Only strings are allowed.
     // TODO: Can we use nested attributes here?
@@ -109,7 +107,7 @@ Humio.prototype.sendMessage = function(parserId, message, additionalFields) {
 
     this.addMetadata(fields);
 
-    const requestBody = [
+    var requestBody = [
       {
         "type": parserId,
         "fields": fields,
@@ -119,7 +117,7 @@ Humio.prototype.sendMessage = function(parserId, message, additionalFields) {
       }
     ];
 
-    const requestOptions = {
+    var requestOptions = {
       host: this.options.host,
       port: this.options.port,
       path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/ingest-messages",
@@ -130,14 +128,14 @@ Humio.prototype.sendMessage = function(parserId, message, additionalFields) {
       }
     };
 
-    const request = https.request(requestOptions, (res) => {
+    var request = https.request(requestOptions, function(res) {
       // TODO: Let sendMessage take a callback where you can report error.
       if (res.statusCode >= 400) {
         console.error(res.statusCode, res.statusMessage);
       }
     });
 
-    request.on('error', (e) => {
+    request.on('error', function(e) {
       // TODO: Let sendMessage take a callback where you can report error.
       console.error(e);
     });
@@ -146,13 +144,13 @@ Humio.prototype.sendMessage = function(parserId, message, additionalFields) {
     request.end();
 };
 
-const parseNDJSON = (text) => {
-  const lines = text.split('\n');
-  const last = lines.pop();
+var parseNDJSON = function(text) {
+  var lines = text.split('\n');
+  var last = lines.pop();
 
   if (last) {
-    const elements = lines.map(JSON.parse);
-    let remainingText;
+    var elements = lines.map(JSON.parse);
+    var remainingText;
     try {
       elements.push(JSON.parse(last));
       remainingText = "";
@@ -169,7 +167,7 @@ const parseNDJSON = (text) => {
 Humio.prototype.stream = function(options, onMatch) {
   if (typeof onMatch !== 'function') throw new Error("onMatch must be a function, got " + onMatch);
 
-  const defaultOptions = {
+  var defaultOptions = {
     queryString: "",
     start: null,
     end: "now",
@@ -179,9 +177,9 @@ Humio.prototype.stream = function(options, onMatch) {
   options = Object.assign({}, defaultOptions, options);
   // TODO: Mention need to use API Token in docs/README
 
-  const requestBody = options;
+  var requestBody = options;
 
-  const requestOptions = {
+  var requestOptions = {
     host: this.options.host,
     port: this.options.port,
     path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/query",
@@ -193,18 +191,18 @@ Humio.prototype.stream = function(options, onMatch) {
     }
   };
 
-  return new Promise((resolve, reject) => {
-    const request = https.request(requestOptions, (res) => {
+  return new Promise(function(resolve, reject) {
+    var request = https.request(requestOptions, function(res) {
 
-      let body = "";
+      var body = "";
 
-      res.on("data", (chunk) => {
+      res.on("data", function(chunk) {
         body += chunk;
         console.log(chunk.toString());
         // Try to see if we have one or more lines
         // report them back to the caller through onMatch.
 
-        const parseResult = parseNDJSON(body);
+        var parseResult = parseNDJSON(body);
         parseResult.elements.forEach(onMatch);
 
         // Discard any JSON that has been parsed.
@@ -212,11 +210,10 @@ Humio.prototype.stream = function(options, onMatch) {
         body = parseResult.remainingText;
       });
 
-      res.on("end", (x) => {
-        const status = res.statusCode >= 400 ? "error" : "success";
-        console.log(res.statusCode, res.statusMessage);
+      res.on("end", function(x) {
+        var status = res.statusCode >= 400 ? "error" : "success";
 
-        const result = {
+        var result = {
           status: status,
           statusCode: res.statusCode,
           error: null,
@@ -239,7 +236,9 @@ Humio.prototype.stream = function(options, onMatch) {
 };
 
 Humio.prototype.run = function(options) {
-  const defaultOptions = {
+  var self = this;
+
+  var defaultOptions = {
     queryString: "",
     start: null,
     end: "now",
@@ -249,9 +248,9 @@ Humio.prototype.run = function(options) {
 
   options = Object.assign({}, defaultOptions, options);
 
-  const requestBody = options;
+  var requestBody = options;
 
-  const requestOptions = {
+  var requestOptions = {
     host: this.options.host,
     port: this.options.port,
     path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/queryjobs",
@@ -264,12 +263,11 @@ Humio.prototype.run = function(options) {
     }
   };
 
-  console.log(requestOptions);
 
   return doRequest(requestOptions, requestBody)
-    .then((res) => {
+    .then(function(res) {
       if (res.status === 'success') {
-        return poll.call(this, res.data.id, options.onPartialResult);
+        return poll.call(self, res.data.id, options.onPartialResult);
       } else {
         return res;
       }
@@ -277,8 +275,8 @@ Humio.prototype.run = function(options) {
 };
 
 // Private Method
-function poll(jobId, onData = null) {
-  const pollRequestOptions = {
+function poll(jobId, onData) {
+  var pollRequestOptions = {
     host: this.options.host,
     port: this.options.port,
     path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/queryjobs/" + encodeURIComponent(jobId),
@@ -291,47 +289,49 @@ function poll(jobId, onData = null) {
     }
   };
 
-  const MAX_POLL_DEPLY = 1000;
+  var MAX_POLL_DEPLY = 1000;
 
-  const doPoll = (resolve, reject, timeout) => {
-    doRequest(pollRequestOptions).then(response => {
+  var doPoll = function(resolve, reject, timeout) {
+    doRequest(pollRequestOptions).then(function(response) {
       if (response.status === "error") {
         reject(response.error);
       } else {
         if (onData) {
-          const progress = Humio.progress(response);
+          var progress = Humio.progress(response);
           onData(response, progress);
         }
         if (response.data.done) {
           resolve(response);
         } else {
-          const newTimeout = Math.min(timeout + 200, MAX_POLL_DEPLY);
-          setTimeout(() => doPoll(resolve, reject, newTimeout), newTimeout);
+          var newTimeout = Math.min(timeout + 200, MAX_POLL_DEPLY);
+          setTimeout(function() { doPoll(resolve, reject, newTimeout); }, newTimeout);
         }
       }
     }).catch(reject);
-  }
+  };
 
-  return new Promise((resolve, reject) => {
+  return new Promise(function(resolve, reject) {
     doPoll(resolve, reject);
   });
 }
 
 
-function doRequest(requestOptions, requestBody = null) {
-  return new Promise((resolve, reject) => {
-    const request = https.request(requestOptions, (res) => {
+function doRequest(requestOptions, requestBody) {
+  requestBody = requestBody || null;
 
-      let chunks = [];
+  return new Promise(function(resolve, reject) {
+    var request = https.request(requestOptions, function(res) {
 
-      res.on("data", (chunk) => {
+      var chunks = [];
+
+      res.on("data", function(chunk) {
         chunks.push(chunk.toString());
       });
 
-      res.on("end", () => {
-        const status = res.statusCode >= 400 ? "error" : "success";
-        const body = chunks.join("");
-        const result = {
+      res.on("end", function() {
+        var status = res.statusCode >= 400 ? "error" : "success";
+        var body = chunks.join("");
+        var result = {
           status: status,
           statusCode: res.statusCode,
           error: null,
@@ -368,15 +368,16 @@ function doRequest(requestOptions, requestBody = null) {
 // Response Helpers
 ////////////////////////////////////////////////////////////////////////////////
 
-Humio.count = (result, fieldName = "_count") => {
+Humio.count = function(result, fieldName) {
+  fieldName = fieldName || "_count";
   if (result.data.events) {
     return result.data.events[0]._count;
   } else {
-    throw new Error("the count function only works for aggregate results")
+    throw new Error("the count function only works for aggregate results");
   }
 };
 
-Humio.progress = (result) => {
+Humio.progress = function(result) {
   if (result.data.metaData.totalWork === 0) return 1;
   return result.data.metaData.workDone / result.data.metaData.totalWork;
 };
@@ -387,7 +388,7 @@ Humio.progress = (result) => {
 ////////////////////////////////////////////////////////////////////////////////
 
 
-Humio.printResult = (result, format) => {
+Humio.printResult = function(result, format) {
   format = format.toLowerCase();
 
   if (format === "groupby") {
@@ -397,7 +398,7 @@ Humio.printResult = (result, format) => {
   }
 };
 
-const padString = function(str, targetLength, padString) {
+var padString = function(str, targetLength, padString) {
     targetLength = Math.floor(targetLength) || 0;
     if (targetLength < str.length) return String(str);
 
@@ -420,28 +421,38 @@ const padString = function(str, targetLength, padString) {
 function printGroupBy(result) {
   if (result.data.events.length === 0) return "[ No Results ]";
 
-  const columns = Object.keys(result.data.events[0]);
-  const getColumnWidths = (event) => {
-    return columns.map(column => event[column].length);
+  var columns = Object.keys(result.data.events[0]);
+  var getColumnWidths = function(event) {
+    return columns.map(function(column) { return event[column].length; });
   };
 
 
 
-  const keepMaxColumn = (acc, event) => {
-    return getColumnWidths(event).map((width, i) => width >= acc[i] ? width : acc[i]);
-  }
+  var keepMaxColumn = function(acc, event) {
+    return getColumnWidths(event).map(function(width, i) { return  width >= acc[i] ? width : acc[i]; });
+  };
 
-  const initialWidths = columns.map(c => c.length);
-  const columnWidths = result.data.events.reduce(keepMaxColumn, initialWidths);
+  var initialWidths = columns.map(function(c) { return c.length; });
+  var columnWidths = result.data.events.reduce(keepMaxColumn, initialWidths);
 
-  const toLine = (event) => columns.reduce((line, column, i) => line + "| " + padString(event[column], columnWidths[i]) + " ", "") + "|\n";
+  var toLine = function(event) {
+      return columns.reduce(function(line, column, i) {
+        return line + "| " + padString(event[column], columnWidths[i]) + " ";
+      }, "") + "|\n";
+  };
 
-  const header = columns.reduce((line, column, i) => line + "| " + padString(column, columnWidths[i]) + " ", "") + "|\n";
-  const seperator = '-'.repeat(header.length - 1) + '\n';
+  var header = columns.reduce(function(line, column, i) {
+    return line + "| " + padString(column, columnWidths[i]) + " ";
+  }, "") + "|\n";
 
-  const output = result.data.events.reduce((out, event) => out + toLine(event), seperator + header + seperator) + seperator;
+  var seperator = '-'.repeat(header.length - 1) + '\n';
+  var front = seperator + header + seperator;
+
+  var output = result.data.events.reduce(function(out, event) {
+    return out + toLine(event);
+  }, front) + seperator;
 
   return output;
-};
+}
 
 module.exports = Humio;

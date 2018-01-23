@@ -1,6 +1,6 @@
-const Humio = require("../index.js"); // require("humio")
+var Humio = require("../index.js"); // require("humio")
 
-const humio = new Humio({
+var humio = new Humio({
   apiToken: process.env.HUMIO_API_TOKEN,
   host: process.env.HUMIO_HOST || "cloud.humio.com",
   dataspaceId: process.env.HUMIO_DATASPACE_ID || "sandbox"
@@ -8,7 +8,7 @@ const humio = new Humio({
 
 // Sending Structured Data (JSON)
 
-const linux = {
+var linux = {
   coreTemperature: "92F",
   server: "andromida-2",
   kernelVersion: "4.14.14"
@@ -40,7 +40,7 @@ humio.sendJson(linux, {
   includeClientMetadata: false,
   includeSessionId: false,
   additionalFields: { "example": "no-metadata" }
-})
+});
 
 
 // You can also send text to be parsed by a parser in Humio.

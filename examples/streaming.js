@@ -14,7 +14,7 @@ var client = new Humio({
 // this query, and we want to make a copy of everything, but don't want
 // to keep it in memory.
 
-const queryOptions = {
+var queryOptions = {
   queryString: '',
   start: "1m"
 };

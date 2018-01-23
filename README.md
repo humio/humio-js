@@ -15,7 +15,7 @@ This library is work in progress. You should not use it for production systems.
 Start by creating a Humio client:
 
 ```javascript
-const Humio = require("humio"); // require("humio")
+const Humio = require("humio");
 
 const humio = new Humio({
   apiToken: "xyz...",

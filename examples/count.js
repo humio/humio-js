@@ -3,18 +3,31 @@ var Humio = require("../index.js");
 var client = new Humio({
   apiToken: process.env.HUMIO_API_TOKEN,
   host: "cloud.humio.com",
-  dataspaceId: "sandbox"
+  dataspaceId: "humio",
 });
 
+// This search counts the number of errors
+// with the word `banana` in the past 10m.
 
-// Run a search for events containing the string "User Created".
-// How many uses have signed up in the past 10m.
+const queryOptions = {
+  queryString: 'loglevel = /error/i | banana | count()',
+  start: "10m",
+  onPartialResult: onPartialResult
+};
 
-client.run({ queryString: '"User Created" | count()', start: "10m" })
-  .then((result) => {
-    if (result.status === "success") {
-      console.info("Event Count:", result.data[0]._count);
-    } else {
-      console.error("Search Error", result.error);
-    }
-  }).catch(console.error);
+client.run(queryOptions).then(onCompletion).catch(console.error);
+
+function onPartialResult(result, progress) {
+  const percent = "(" + (progress * 100).toFixed(2) + "%)";
+  console.log("Partial Result: " + Humio.count(result) + " " + percent);
+}
+
+function onCompletion(result) {
+  if (result.status === "success") {
+    // We use the `count` helper to extract the _count field from the
+    // first record in the dataset.
+    console.info("Final Count:", Humio.count(result));
+  } else {
+    console.error("Search Error", result.error);
+  }
+}

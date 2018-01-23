@@ -59,6 +59,36 @@ Notice that even though `_count` is a number we have to parse it using
 `parserInt`. That is because in Humio everything is just a string, and is
 returned as a string.
 
+#### Stream or Aggregate
+
+There are two functions used for querying:
+
+- `stream`
+- `run`
+
+The `stream` function should be used when you have a need to stream results as they
+are found by humio. You should use `stream` for getting very large result sets – since
+they are sent instantly Humio does not need to hold them in memory.
+
+While you can use `stream` execute aggregate functions like `timechart` or `count`,
+it does not make much sense stream it. That is where `run` fits in.
+
+The `run` function is meant primarily for aggregate functions and small filter
+searches with smaller result sets. It will start a search in humio and periodically
+return partial results as the search progresses.
+
+E.g. the query `service=kubernetes | count()` will return the number events with
+the field `service=kubernetes`. As Humio completes the search it will periodically
+send back the result so far.
+
+```javascript
+client.run({query: "service=kubernetes | count()", onPartialResult: (result, progress) => {
+  console.log(Humio.count(result), 100 * progress + "%");
+}});
+```
+
+Both is `stream` and `run` return promises, that resolve to the final result.
+
 ### Sending Data To Humio
 
 ```javascript
@@ -110,14 +140,14 @@ humio.sendMessage(
 );
 ```
 
-### Checklist
+### TODO
 
-- [ ] Streaming Results
-- [ ] Live Queries
+- [x] Live Queries
 - [ ] Buffered Sending (don't send messages one at a time)
-- [ ] Error handling, callback function (or Promise)
+- [x] Error handling, callback function (or Promise)
 - [ ] Resubmission and back-off
-- [ ] Feature: Search Streaming
+- [x] Streaming Search / Partial Results
+- [ ] Ability to cancel running search
 
 ## Contribute
 

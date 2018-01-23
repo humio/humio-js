@@ -145,7 +145,29 @@ Humio.prototype.sendMessage = function(parserId, message, additionalFields) {
     request.end();
 };
 
-Humio.prototype.run = function(options) {
+const parseNDJSON = (text) => {
+  const lines = text.split('\n');
+  const last = lines.pop();
+
+  if (last) {
+    const elements = lines.map(JSON.parse);
+    let remainingText;
+    try {
+      elements.push(JSON.parse(last));
+      remainingText = "";
+    } catch (e) {
+      // The last item is not a complete json object.
+      remainingText = last;
+    }
+    return { elements: elements, remainingText: remainingText };
+  } else {
+    return { elements: [], remainingText : "" };
+  }
+};
+
+Humio.prototype.stream = function(options, onMatch) {
+  if (typeof onMatch !== 'function') throw new Error("onMatch must be a function, got " + onMatch);
+
   const defaultOptions = {
     queryString: "",
     start: null,
@@ -164,6 +186,78 @@ Humio.prototype.run = function(options) {
     path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/query",
     method: 'POST',
     headers: {
+      'Authorization': 'Bearer ' + this.options.apiToken,
+      'Content-Type': 'application/json',
+      'Accept': 'text/plain'
+    }
+  };
+
+  console.log(requestOptions);
+
+  return new Promise((resolve, reject) => {
+    const request = https.request(requestOptions, (res) => {
+
+      let body = "";
+
+      res.on("data", (chunk) => {
+        body += chunk;
+        console.log(chunk.toString());
+        // Try to see if we have one or more lines
+        // report them back to the caller through onMatch.
+
+        const parseResult = parseNDJSON(body);
+        parseResult.elements.forEach(onMatch);
+
+        // Discard any JSON that has been parsed.
+
+        body = parseResult.remainingText;
+      });
+
+      res.on("end", (x) => {
+        const status = res.statusCode >= 400 ? "error" : "success";
+        console.log(res.statusCode, res.statusMessage);
+
+        const result = {
+          status: status,
+          statusCode: res.statusCode,
+          error: null,
+          data: null
+        };
+
+        if (res.statusCode >= 400) {
+          result.error = body;
+        }
+
+        resolve(result);
+      });
+    });
+
+    request.on('error', reject);
+
+    request.write(JSON.stringify(requestBody));
+    request.end();
+  });
+};
+
+Humio.prototype.run = function(options) {
+  const defaultOptions = {
+    queryString: "",
+    start: null,
+    end: "now",
+    isLive: false,
+    onPartialResult: null,
+  };
+
+  options = Object.assign({}, defaultOptions, options);
+
+  const requestBody = options;
+
+  const requestOptions = {
+    host: this.options.host,
+    port: this.options.port,
+    path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/queryjobs",
+    method: 'POST',
+    headers: {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ' + this.options.apiToken,
       'Accept': 'application/json',
@@ -171,6 +265,59 @@ Humio.prototype.run = function(options) {
     }
   };
 
+  return doRequest(requestOptions, requestBody)
+    .then((res) => {
+      if (res.status === 'success') {
+        return poll.call(this, res, options.onPartialResult);
+      } else {
+        return res;
+      }
+    });
+};
+
+// Private Method
+function poll(jobId, onData = null) {
+  const pollRequestOptions = {
+    host: this.options.host,
+    port: this.options.port,
+    path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/queryjobs/" + urlEncodeComponents(jobId),
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + this.options.apiToken,
+      'Accept': 'application/json',
+      'Connection': 'keep-alive'
+    }
+  };
+
+  const MAX_POLL_DEPLY = 1000;
+
+  const doPoll = (resolve, reject, timeout) => {
+    doRequest(pollRequestOptions).then(response => {
+      if (response.status === "error") {
+        reject(response.error);
+      } else {
+        if (onData) {
+          const progress = Humio.progress(response);
+          onData(response, progress);
+        }
+        if (response.data.done) {
+          resolve(response);
+        } else {
+          const newTimeout = Math.min(timeout + 200, MAX_POLL_DEPLY);
+          setTimeout(() => doPoll(resolve, reject, newTimeout), newTimeout);
+        }
+      }
+    }).catch(reject);
+  }
+
+  return new Promise((resolve, reject) => {
+    doPoll(resolve, reject);
+  });
+}
+
+
+function doRequest(requestOptions, requestBody = null) {
   return new Promise((resolve, reject) => {
     const request = https.request(requestOptions, (res) => {
 
@@ -208,9 +355,32 @@ Humio.prototype.run = function(options) {
 
     request.on('error', reject);
 
-    request.write(JSON.stringify(requestBody));
+    if (requestBody) {
+      request.write(JSON.stringify(requestBody));
+    }
+
     request.end();
   });
-};
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Response Helpers
+////////////////////////////////////////////////////////////////////////////////
+
+Humio.count = (result) => {
+  let events;
+  if (result.data.events) {
+    events = result.data.events;
+  } else {
+    events = result.data;
+  }
+
+  events[0]._count;
+}
+
+Humio.progress = (result) => {
+  if (result.data.metaData.totalWork === 0) return 1;
+  return result.data.metaData.workDone / result.data.metaData.totalWork;
+}
 
 module.exports = Humio;

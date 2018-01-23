@@ -435,7 +435,7 @@ function printGroupBy(result) {
 
   const toLine = (event) => columns.reduce((line, column, i) => line + "| " + padString(event[column], columnWidths[i]) + " ", "") + "|\n";
 
-  const header = columns.reduce((line, column, i) => line + "| " + column.padEnd(columnWidths[i]) + " ", "") + "|\n";
+  const header = columns.reduce((line, column, i) => line + "| " + padString(column, columnWidths[i]) + " ", "") + "|\n";
   const seperator = '-'.repeat(header.length - 1) + '\n';
 
   const output = result.data.events.reduce((out, event) => out + toLine(event), seperator + header + seperator) + seperator;

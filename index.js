@@ -263,7 +263,7 @@ Humio.prototype.run = function(options) {
     }
   };
 
-  console.log(requestOptions)
+  console.log(requestOptions);
 
   return doRequest(requestOptions, requestBody)
     .then((res) => {
@@ -396,6 +396,26 @@ Humio.printResult = (result, format) => {
   }
 };
 
+const padString = function(str, targetLength, padString) {
+    targetLength = Math.floor(targetLength) || 0;
+    if (targetLength < str.length) return String(str);
+
+    padString = padString ? String(padString) : " ";
+
+    var pad = "";
+    var len = targetLength - str.length;
+    var i = 0;
+    while(pad.length < len) {
+        if(!padString[i]) {
+            i = 0;
+        }
+        pad += padString[i];
+        i++;
+    }
+
+    return String(str).slice(0) + pad;
+};
+
 function printGroupBy(result) {
   if (result.data.events.length === 0) return "[ No Results ]";
 
@@ -404,6 +424,8 @@ function printGroupBy(result) {
     return columns.map(column => event[column].length);
   };
 
+
+
   const keepMaxColumn = (acc, event) => {
     return getColumnWidths(event).map((width, i) => width >= acc[i] ? width : acc[i]);
   }
@@ -411,7 +433,7 @@ function printGroupBy(result) {
   const initialWidths = columns.map(c => c.length);
   const columnWidths = result.data.events.reduce(keepMaxColumn, initialWidths);
 
-  const toLine = (event) => columns.reduce((line, column, i) => line + "| " + event[column].padEnd(columnWidths[i]) + " ", "") + "|\n";
+  const toLine = (event) => columns.reduce((line, column, i) => line + "| " + padString(event[column], columnWidths[i]) + " ", "") + "|\n";
 
   const header = columns.reduce((line, column, i) => line + "| " + column.padEnd(columnWidths[i]) + " ", "") + "|\n";
   const seperator = '-'.repeat(header.length - 1) + '\n';

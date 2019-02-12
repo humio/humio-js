@@ -129,7 +129,7 @@ unstructured ingest API.
 
 humio.sendMessage(
   "2018-01-19T12:58:34.441Z [warn] User login failed. username=admin ip=101.127.184.11",
-  { additionalFields: {'domain': 'example.com'} }
+  {'domain': 'example.com'}
 );
 ```
 

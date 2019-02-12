@@ -1,5 +1,6 @@
 var crypto = require("crypto");
 var https = require("https");
+var http = require("http");
 
 var defaultHost = "cloud.humio.com";
 var defaultPort = 443;
@@ -11,14 +12,17 @@ var Humio = function Humio(options) {
   }
 
   this.options = Object.assign({}, options);
+  this.options.ssl = (this.options.ssl === undefined || this.options.ssl === null) || this.options.ssl;
   this.options.host = this.options.host || defaultHost;
   this.options.port = this.options.port || defaultPort;
+  this.options.basePath = this.options.basePath || "";
   this.options.dataspaceId = this.options.dataspaceId || defaultDataspaceId;
   this.options.sessionId = this.options.sessionId || crypto.randomBytes(40).toString('hex');
   this.options.includeClientMetadata = this.options.includeClientMetadata || true;
   this.options.includeSessionId = this.options.includeSessionId || true;
   this.options.additionalFields = this.options.additionalFields || {};
-
+  this.options.ingestToken = this.options.ingestToken || null;
+  this.options.repository = this.options.repository || null;
 };
 
 var CLIENT_VERSION = require('./package.json').version;
@@ -66,34 +70,18 @@ Humio.prototype.sendJson = function(json, options) {
     }
   ];
 
-  var requestOptions = {
-    host: this.options.host,
-    port: this.options.port,
-    path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/ingest",
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + this.options.apiToken
-    }
-  };
-
-  var request = https.request(requestOptions, function(res) {
-    // TODO: Let sendJson take a callback where you can report error.
-    if (res.statusCode >= 400) {
-      console.error(res.statusCode, res.statusMessage);
-    }
-  });
-
-  request.on('error', function(e) {
-    // TODO: Let sendJson take a callback where you can report error.
-    console.error(e);
-  });
-
-  request.write(JSON.stringify(requestBody));
-  request.end();
+  var uri = "/api/v1/ingest/humio-structured";
+  return this._doIngestRequest(uri, requestBody);
 };
 
-Humio.prototype.sendMessage = function(parserId, message, additionalFields) {
+/** Sends an unstructured message to Humio.
+ * Returns a promise.
+ */
+Humio.prototype.sendMessage = function(message, additionalFields) {
+    if (!this.options.ingestToken) {
+      throw new Error("ingestToken option must be set to use sendMessage");
+    }
+
     var fields = Object.assign({}, this.options.additionalFields, additionalFields);
 
     // Only strings are allowed.
@@ -109,7 +97,6 @@ Humio.prototype.sendMessage = function(parserId, message, additionalFields) {
 
     var requestBody = [
       {
-        "type": parserId,
         "fields": fields,
         "messages": [
           message
@@ -117,51 +104,60 @@ Humio.prototype.sendMessage = function(parserId, message, additionalFields) {
       }
     ];
 
-    var requestOptions = {
-      host: this.options.host,
-      port: this.options.port,
-      path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/ingest-messages",
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + this.options.apiToken
-      }
-    };
+    var uri = "/api/v1/ingest/humio-unstructured";
+    return this._doIngestRequest(uri, requestBody);
+};
 
-    var request = https.request(requestOptions, function(res) {
-      // TODO: Let sendMessage take a callback where you can report error.
+Humio.prototype._doIngestRequest = function(uri, requestBody) {
+  var requestOptions = {
+    host: this.options.host,
+    port: this.options.port,
+    path: (this.options.basePath) + uri,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + this.options.ingestToken
+    }
+  };
+
+  return new Promise((resolve, reject) => {
+
+    let makeRequest =
+      this.options.ssl ? https.request : http.request;
+
+    var request = makeRequest(requestOptions, function(res) {
       if (res.statusCode >= 400) {
-        console.error(res.statusCode, res.statusMessage);
+        reject(new Error(`The server returned an error. statusCode=${res.statusCode} message='${res.statusMessage}'`));
+      } else {
+        resolve();
       }
     });
 
-    request.on('error', function(e) {
-      // TODO: Let sendMessage take a callback where you can report error.
-      console.error(e);
-    });
+    request.on('error', reject);
 
     request.write(JSON.stringify(requestBody));
     request.end();
-};
+  });
+}
 
 var parseNDJSON = function(text) {
   var lines = text.split('\n');
   var last = lines.pop();
+  var remainingText = "";
+  var elements = [];
 
-  if (last) {
-    var elements = lines.map(JSON.parse);
-    var remainingText;
+  if (last !== undefined) {
+    elements = lines.filter(e => e !== "").map(JSON.parse);
+
     try {
       elements.push(JSON.parse(last));
-      remainingText = "";
     } catch (e) {
       // The last item is not a complete json object.
       remainingText = last;
     }
-    return { elements: elements, remainingText: remainingText };
-  } else {
-    return { elements: [], remainingText : "" };
   }
+
+  return { elements: elements, remainingText: remainingText };
 };
 
 Humio.prototype.stream = function(options, onMatch) {
@@ -171,7 +167,7 @@ Humio.prototype.stream = function(options, onMatch) {
     queryString: "",
     start: null,
     end: "now",
-    isLive: false
+    isLive: false,
   };
 
   options = Object.assign({}, defaultOptions, options);
@@ -179,10 +175,16 @@ Humio.prototype.stream = function(options, onMatch) {
 
   var requestBody = options;
 
+  var repository = options.repository || this.options.repository;
+
+  if (!repository) {
+    throw new Error("The option 'repository' must be specified.");
+  }
+
   var requestOptions = {
     host: this.options.host,
     port: this.options.port,
-    path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/query",
+    path: this.options.basePath + "/api/v1/dataspaces/" + repository + "/query",
     method: 'POST',
     headers: {
       'Authorization': 'Bearer ' + this.options.apiToken,
@@ -191,14 +193,14 @@ Humio.prototype.stream = function(options, onMatch) {
     }
   };
 
-  return new Promise(function(resolve, reject) {
-    var request = https.request(requestOptions, function(res) {
+  return new Promise((resolve, reject) => {
+    var makeRequest = this.options.ssl ? https.request : http.request;
+    var body = "";
 
-      var body = "";
-
+    var request = makeRequest(requestOptions, function(res) {
       res.on("data", function(chunk) {
         body += chunk;
-        console.log(chunk.toString());
+
         // Try to see if we have one or more lines
         // report them back to the caller through onMatch.
 
@@ -209,23 +211,26 @@ Humio.prototype.stream = function(options, onMatch) {
 
         body = parseResult.remainingText;
       });
+    });
 
-      res.on("end", function(x) {
-        var status = res.statusCode >= 400 ? "error" : "success";
+    request.on('response', message => {
+      var status = message.statusCode >= 400 ? "error" : "success";
 
-        var result = {
-          status: status,
-          statusCode: res.statusCode,
-          error: null,
-          data: null
-        };
-
-        if (res.statusCode >= 400) {
-          result.error = body;
+      var result = {
+        status: status,
+        statusCode: message.statusCode,
+        error: null,
+        cancel: function() {
+          message.destroy();
         }
+      };
 
+      if (message.statusCode >= 400) {
+        result.error = body;
+        reject(result);
+      } else {
         resolve(result);
-      });
+      }
     });
 
     request.on('error', reject);
@@ -250,10 +255,18 @@ Humio.prototype.run = function(options) {
 
   var requestBody = options;
 
+  var repository = options.repository || this.options.repository;
+
+  if (!repository) {
+    throw new Error("The option 'repository' must be specified.");
+  }
+
+  var uri = this.options.basePath + "/api/v1/repositories/" + repository + "/queryjobs";
+
   var requestOptions = {
     host: this.options.host,
     port: this.options.port,
-    path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/queryjobs",
+    path: uri,
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -263,11 +276,10 @@ Humio.prototype.run = function(options) {
     }
   };
 
-
-  return doRequest(requestOptions, requestBody)
+  return doRequest.call(this, requestOptions, requestBody)
     .then(function(res) {
       if (res.status === 'success') {
-        return poll.call(self, res.data.id, options.onPartialResult);
+        return poll.call(self, uri, res.data.id, options.onPartialResult);
       } else {
         return res;
       }
@@ -275,11 +287,11 @@ Humio.prototype.run = function(options) {
 };
 
 // Private Method
-function poll(jobId, onData) {
+function poll(uri, jobId, onData) {
   var pollRequestOptions = {
     host: this.options.host,
     port: this.options.port,
-    path: "/api/v1/dataspaces/" + this.options.dataspaceId + "/queryjobs/" + encodeURIComponent(jobId),
+    path: uri + "/" + encodeURIComponent(jobId),
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -289,10 +301,10 @@ function poll(jobId, onData) {
     }
   };
 
-  var MAX_POLL_DEPLY = 1000;
+  var MAX_POLL_DELAY = 1000;
 
-  var doPoll = function(resolve, reject, timeout) {
-    doRequest(pollRequestOptions).then(function(response) {
+  var doPoll = (resolve, reject, timeout) => {
+    doRequest.call(this, pollRequestOptions).then(function(response) {
       if (response.status === "error") {
         reject(response.error);
       } else {
@@ -303,7 +315,8 @@ function poll(jobId, onData) {
         if (response.data.done) {
           resolve(response);
         } else {
-          var newTimeout = Math.min(timeout + 200, MAX_POLL_DEPLY);
+          // TODO: Use the suggested poll timeout sent from the server.
+          var newTimeout = Math.min(timeout + 200, MAX_POLL_DELAY);
           setTimeout(function() { doPoll(resolve, reject, newTimeout); }, newTimeout);
         }
       }
@@ -319,8 +332,9 @@ function poll(jobId, onData) {
 function doRequest(requestOptions, requestBody) {
   requestBody = requestBody || null;
 
-  return new Promise(function(resolve, reject) {
-    var request = https.request(requestOptions, function(res) {
+  return new Promise((resolve, reject) => {
+    var makeRequest = this.options.ssl ? https.request : http.request;
+    var request = makeRequest(requestOptions, function(res) {
 
       var chunks = [];
 

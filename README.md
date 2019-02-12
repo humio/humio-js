@@ -18,9 +18,12 @@ Start by creating a Humio client:
 const Humio = require("humio");
 
 const humio = new Humio({
-  apiToken: "xyz...",
-  host: "cloud.humio.com",
-  dataspaceId: "example"
+  apiToken: "xyz...", // needed if you use the administration api
+  ingestToken: "xyz...", // the default ingest tokens to use for #run and #stream
+  host: "cloud.humio.com", // the host name
+  port: 443, // default (443), the port Humio is run on
+  basePath: "/", // default ("/"), basePath prepended to all API URLs.
+  repository: "sandbox" // default ("sandbox"), the default repository (or view) to work with
 });
 ```
 
@@ -119,13 +122,12 @@ humio.sendJson(linux, {
 
 Apart from sending json you can also send _normal_ unstructured log lines to Humio.
 
+You will need to assign a parser to the ingest token in Humio before using the
+unstructured ingest API.
+
 ```javascript
 
-// You can also send text to be parsed by a parser in Humio.
-// Here we are using the build-in key-value parser (kv).
-
 humio.sendMessage(
-  "kv",
   "2018-01-19T12:58:34.441Z [warn] User login failed. username=admin ip=101.127.184.11",
   { additionalFields: {'domain': 'example.com'} }
 );
@@ -176,7 +178,7 @@ humio.sendJson(linux, {
 - [x] Error handling, callback function (or Promise)
 - [ ] Resubmission and back-off
 - [x] Streaming Search / Partial Results
-- [ ] Ability to cancel running search
+- [ ] Ability to cancel running search (works for #stream, not #run)
 
 ## Contribute
 

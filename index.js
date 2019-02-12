@@ -7,10 +7,6 @@ var defaultPort = 443;
 var defaultDataspaceId = "sandbox";
 
 var Humio = function Humio(options) {
-  if (!options.apiToken) {
-    throw new Error("Humio apiToken must be specified in the options.");
-  }
-
   this.options = Object.assign({}, options);
   this.options.ssl = (this.options.ssl === undefined || this.options.ssl === null) || this.options.ssl;
   this.options.host = this.options.host || defaultHost;

@@ -134,7 +134,7 @@ humio.sendMessage(
 ```
 
 If you are planning on using Humio for logging, consider using a log shipper
-like [Filebeat](https://cloud.humio.com/docs/first-time-use/index.html) instead.
+like [Filebeat](https://docs.humio.com/integrations/data-shippers/beats/filebeat/) instead.
 It will handle connection problems, resubmission, etc. for you and is
 compatible with Humio. This goes for structured events as well.
 

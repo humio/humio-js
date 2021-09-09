@@ -17,5 +17,9 @@
     "https-browserify": "^1.0.0",
     "mocha": "^5.2.0"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "files": [
+    "index.js",
+    "dist/humio.browser.js"
+  ]
 }

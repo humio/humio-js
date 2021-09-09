@@ -1,21 +1,32 @@
-# Humio for NodeJS <a href="https://www.npmjs.com/package/humio"><img src="https://img.shields.io/npm/v/humio.svg" alt="" /></a>
+# Humio Javascript Client <a href="https://www.npmjs.com/package/humio"><img src="https://img.shields.io/npm/v/humio.svg" alt="" /></a>
 
-With Humio for NodeJS you can do
-
-- Data Mining & Ad-Hoc Searches
-- Logging
-- Events Collecting
-
-## Work in Progress
-
-This library is work in progress. You should not use it for production systems.
+With Humio's Javascript client you can do Execute Queries and Searches and Log to Humio.
 
 ## Usage
 
-Start by creating a Humio client:
+```
+npm install -S humio
+```
+
+Depending on your environment you should use the import the appropriate file:
+
+
+### NodeJs, Webpack or similar
 
 ```javascript
-const Humio = require("humio");
+import Humio from 'humio';
+// or
+var Humio = require('humio')
+```
+
+### Vanilla Browser
+
+```html
+<script src="<path-to-humio>/dist/browser.js"></script>
+<script>
+    var Humio = require("humio");
+</script>
+```
 
 const humio = new Humio({
   apiToken: "xyz...", // needed if you use the administration api

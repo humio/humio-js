@@ -22,9 +22,9 @@ var Humio = require('humio')
 ### Vanilla Browser
 
 ```html
-<script src="<path-to-humio>/dist/browser.js"></script>
+<script src="<path-to-humio>/dist/humio.browser.js"></script>
 <script>
-    var Humio = require("humio");
+    window.Humio
 </script>
 ```
 

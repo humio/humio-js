@@ -8,6 +8,7 @@
   "author": "Thomas Anagrius",
   "license": "Apache-2.0",
   "scripts": {
+    "prepack": "npm run build",
     "test": "mocha tests/tests.js",
     "build": "browserify --standalone Humio index.js -o dist/humio.browser.js"
   },

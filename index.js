@@ -1,10 +1,19 @@
-var crypto = require("crypto");
 var https = require("https");
 var http = require("http");
 
 var defaultHost = "cloud.humio.com";
 var defaultPort = 443;
 var defaultDataspaceId = "sandbox";
+
+function randomString(length) {
+  var result = '';
+  var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  var charactersLength = characters.length;
+  for (var i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result;
+}
 
 var Humio = function Humio(options) {
   this.options = Object.assign({}, options);
@@ -13,7 +22,7 @@ var Humio = function Humio(options) {
   this.options.port = this.options.port || defaultPort;
   this.options.basePath = this.options.basePath || "";
   this.options.dataspaceId = this.options.dataspaceId || defaultDataspaceId;
-  this.options.sessionId = this.options.sessionId || crypto.randomBytes(40).toString('hex');
+  this.options.sessionId = this.options.sessionId || randomString(40);
   this.options.includeClientMetadata = this.options.includeClientMetadata || true;
   this.options.includeSessionId = this.options.includeSessionId || true;
   this.options.additionalFields = this.options.additionalFields || {};

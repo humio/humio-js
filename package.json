@@ -1,6 +1,6 @@
 {
   "name": "humio",
-  "version": "0.4.0-beta3",
+  "version": "0.4.0-beta4",
   "description": "Javascript client for Humio.",
   "main": "index.js",
   "browser": "dist/humio.browser.js",

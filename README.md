@@ -28,6 +28,9 @@ var Humio = require('humio')
 </script>
 ```
 
+### Creating a client instance
+
+```javascript
 const humio = new Humio({
   apiToken: "xyz...", // needed if you use the administration api
   ingestToken: "xyz...", // the default ingest tokens to use for #run and #stream

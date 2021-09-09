@@ -1,19 +1,21 @@
 {
   "name": "humio",
   "version": "0.4.0-beta3",
-  "description": "Log to Humio from NodeJS.",
+  "description": "Javascript client for Humio.",
   "main": "index.js",
+  "browser": "dist/humio.browser.js",
   "repository": "https://github.com/humio/humio-node.git",
   "author": "Thomas Anagrius",
   "license": "Apache-2.0",
   "scripts": {
     "test": "mocha tests/tests.js",
-    "build": "browserify index.js -o dist/humio.browser.js"
+    "build": "browserify --standalone Humio index.js -o dist/humio.browser.js"
   },
   "devDependencies": {
     "browserify": "^17.0.0",
     "http-browserify": "^1.7.0",
     "https-browserify": "^1.0.0",
     "mocha": "^5.2.0"
-  }
+  },
+  "dependencies": {}
 }

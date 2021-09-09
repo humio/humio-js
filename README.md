@@ -57,7 +57,7 @@ client.run({ queryString: '"User Created" | count()', start: "10m", isLive: true
 ```
 
 You should always check `status` on `result`. Humio will not report query errors
-in the catch clause, because the the operation was a success but your input was
+in the catch clause, because the operation was a success, but your input was
 likely not correct. The error reason is stored in `result.error`.
 
 If the request fails do so a connection error or similar it will be reported in

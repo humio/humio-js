@@ -1,0 +1,86 @@
+<!doctype html>
+<body>
+    <div>
+        <label for="address">Humio URL</label>
+        <input id="address" /><button onClick="connect()">Connect</button>
+    </div>
+
+    <div>
+        <label for="authToken">Auth Token</label>
+        <input id="authToken" />
+    </div>
+
+    <div id="message">Not Connected</div>
+
+    <div>
+        <label for="query">Query</label>
+        <input id="query" />
+    </div>
+    <button onClick="run()">Run</button>
+
+    <div>
+        <label for="result">Result</label>
+        <pre id="result"></pre>
+    </div>
+
+    <!-- SCRIPT -->
+
+    <script src="humio.browser.js" /></script>
+
+    <script>
+        function setHtml(id, text) {
+            document.getElementById(id).innerHTML = text;
+        }
+
+        function setValue(id, text) {
+            document.getElementById(id).value = text;
+        }
+
+        setValue("address", "localhost");
+        setValue("authToken", "lyeaM0DYawnFQ5yGGhI7KMN7y6ts6VW9X4RRrb5xmI6q");
+
+        function message(text) {
+            setHtml("message", text);
+        }
+
+        function showResult(data) {
+            setHtml("result", JSON.stringify(data));
+        }
+
+        var client = null;
+
+        function connect() {
+            host = document.getElementById("address").value;
+            apiToken = document.getElementById("authToken").value;
+
+            client = new Humio({
+                apiToken: apiToken,
+                host: host,
+                port: 8080,
+                ssl: false,
+                basePath: "",
+                repository: "humio"
+            });
+        }
+
+        function run() {
+            if (!client) return;
+
+            var query = document.getElementById("query").value;
+
+            client.run({ queryString: query, start: "10m" })
+                .then((result) => {
+                    console.log(result);
+                    if (result.status === "success") {
+                        showResult(result);
+                    } else {
+                        console.error("Search Error", result.error);
+                    }
+                }).catch(console.error);
+        }
+
+        if (!window.Humio) {
+            message("You must run the `npm run build` command first.");
+        }
+    </script>
+</body>

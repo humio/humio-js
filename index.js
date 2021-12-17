@@ -65,7 +65,7 @@ Humio.prototype.sendJson = function(json, options) {
 
   var requestBody = [
     {
-      "tags": {},
+      "tags": options.tags || {},
       "events": [
         {
           "attributes": sentFields,
